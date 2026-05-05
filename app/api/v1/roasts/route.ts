@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { roastStore } from '@/lib/store'
+import { supabaseServer } from '@/lib/supabase'
 
 const FALLBACK_SCORES = {
   recruiterAppeal: {
@@ -154,8 +155,15 @@ Experience: ${experience || 'Not provided'}`
     console.log('[API] Raw scores response:', raw.slice(0, 200))
     scores = JSON.parse(raw)
     console.log('[API] Scores parsed successfully')
-  } catch (scoreError) {
-    console.error('[API] Score generation failed, using fallback:', scoreError)
+  } catch (scoreError: unknown) {
+    const msg = scoreError instanceof Error
+      ? scoreError.message
+      : String(scoreError)
+    if (msg.includes('insufficient_quota') || msg.includes('429')) {
+      console.warn('[API] OpenAI quota exceeded — using fallback scores')
+    } else {
+      console.error('[API] Score generation failed:', msg)
+    }
     scores = FALLBACK_SCORES
   }
 
@@ -182,8 +190,15 @@ Experience: ${experience || 'Not provided'}`
     })
     roast = roastRes.choices[0].message.content ?? FALLBACK_ROAST
     console.log('[API] Roast generated, length:', roast.length)
-  } catch (roastError) {
-    console.error('[API] Roast generation failed, using fallback:', roastError)
+  } catch (roastError: unknown) {
+    const msg = roastError instanceof Error
+      ? roastError.message
+      : String(roastError)
+    if (msg.includes('insufficient_quota') || msg.includes('429')) {
+      console.warn('[API] OpenAI quota exceeded — using fallback roast')
+    } else {
+      console.error('[API] Roast generation failed:', msg)
+    }
     roast = FALLBACK_ROAST
   }
 
@@ -210,8 +225,15 @@ Experience: ${experience || 'Not provided'}`
     })
     rewrite = rewriteRes.choices[0].message.content ?? FALLBACK_REWRITE
     console.log('[API] Rewrite generated, length:', rewrite.length)
-  } catch (rewriteError) {
-    console.error('[API] Rewrite generation failed, using fallback:', rewriteError)
+  } catch (rewriteError: unknown) {
+    const msg = rewriteError instanceof Error
+      ? rewriteError.message
+      : String(rewriteError)
+    if (msg.includes('insufficient_quota') || msg.includes('429')) {
+      console.warn('[API] OpenAI quota exceeded — using fallback rewrite')
+    } else {
+      console.error('[API] Rewrite generation failed:', msg)
+    }
     rewrite = FALLBACK_REWRITE
   }
 
@@ -225,6 +247,27 @@ Experience: ${experience || 'Not provided'}`
     createdAt: Date.now()
   })
   console.log('[API] Stored completed result for:', roastId)
+
+  // Save to Supabase asynchronously (non-blocking)
+  supabaseServer
+    .from('roasts')
+    .insert({
+      id: roastId,
+      headline: headline,
+      about: about,
+      experience: experience || null,
+      scores: scores,
+      roast: roast,
+      rewrite: rewrite,
+    })
+    .then(({ error }) => {
+      if (error) {
+        console.error('[Supabase] Insert failed:', error.message)
+      } else {
+        console.log('[Supabase] Saved roast:', roastId)
+      }
+    })
+  // Note: no await - this runs after the response is returned
 
   return Response.json(
     { data: { roast_id: roastId, status: 'processing' }},

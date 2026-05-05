@@ -93,8 +93,11 @@ export default function RoastPage() {
 
     let attempts = 0;
     const maxAttempts = 30;
+    let stopped = false;
 
     const poll = async () => {
+      if (stopped) return;
+
       try {
         const res = await fetch(`/api/v1/roasts/${id}`);
 
@@ -108,34 +111,48 @@ export default function RoastPage() {
         const session = json.data;
 
         if (session.status === "completed") {
-          setData(session);
-          setLoading(false);
+          if (!stopped) {
+            setData(session);
+            setLoading(false);
+          }
           return;
         }
 
         if (session.status === "error") {
-          setError("The AI choked on your cringe. Try again.");
-          setLoading(false);
+          if (!stopped) {
+            setError("The AI choked on your cringe. Try again.");
+            setLoading(false);
+          }
           return;
         }
 
         attempts++;
         if (attempts >= maxAttempts) {
-          setError(
-            "AI is taking too long. Your profile must be really bad. Try again."
-          );
-          setLoading(false);
+          if (!stopped) {
+            setError(
+              "AI is taking too long. Your profile must be really bad. Try again."
+            );
+            setLoading(false);
+          }
           return;
         }
 
-        setTimeout(poll, 1000);
+        if (!stopped) {
+          setTimeout(poll, 1000);
+        }
       } catch {
-        setError("Connection failed. Try again.");
-        setLoading(false);
+        if (!stopped) {
+          setError("Connection failed. Try again.");
+          setLoading(false);
+        }
       }
     };
 
     poll();
+
+    return () => {
+      stopped = true;
+    };
   }, [id]);
 
   if (loading)
