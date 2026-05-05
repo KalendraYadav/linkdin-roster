@@ -117,6 +117,33 @@ export default function RoastPage() {
   const id = params.id as string;
   const router = useRouter();
 
+  const dummyScores = {
+    recruiterAppeal: {
+      value: 42,
+      label: "Needs Help",
+      insight: "Recruiters would scroll past this in 0.3 seconds.",
+    },
+    keywordDensity: {
+      value: 61,
+      label: "Buzzword Bingo",
+      insight: "LinkedIn keywords: yes. Meaning: no.",
+    },
+    authenticity: {
+      value: 28,
+      label: "Fake Detected 🤖",
+      insight: "This reads like ChatGPT wrote your soul.",
+    },
+    cringeFactor: {
+      value: 87,
+      label: "Certified Cringe 💀",
+      insight: "Your mother would be concerned.",
+    },
+  };
+
+  const dummyRoast = `Your headline reads like a fortune cookie  had a LinkedIn phase. 'Visionary Ninja'? The only thing you're  disrupting is everyone's ability to take you seriously.  You've listed 'blockchain', 'AI', and 'Web3' without explaining  what you actually DO with any of them.`;
+
+  const dummyRewrite = `Product Leader with 6+ years driving  B2B SaaS growth. Led cross-functional teams of 8+ to ship  features used by 50,000+ users. Focused on measurable outcomes:  reduced churn 23%, grew ARR from $1.2M to $4.8M.`;
+
   const [data, setData] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -259,11 +286,12 @@ export default function RoastPage() {
       </main>
     );
 
-  const { scores, roast, rewrite } = data as {
-    scores: Record<string, { value: number; label: string; insight: string }>;
-    roast: string;
-    rewrite: string;
-  };
+  const scores = (data?.scores ?? dummyScores) as Record<
+    string,
+    { value: number; label: string; insight: string }
+  >;
+  const roast = (data?.roast ?? dummyRoast) as string;
+  const rewrite = (data?.rewrite ?? dummyRewrite) as string;
 
   const worstScore = Math.min(
     scores.recruiterAppeal.value,
@@ -294,185 +322,188 @@ export default function RoastPage() {
           minHeight: "100vh",
           backgroundColor: "#0a0a0a",
           color: "#f5f5f5",
-          fontFamily: "Space Grotesk, sans-serif",
+          fontFamily: "Space Mono, monospace",
           padding: "2rem",
-          maxWidth: "800px",
+          maxWidth: "900px",
           margin: "0 auto",
         }}
       >
-      <div
-        style={{
-          marginBottom: "2rem",
-          borderBottom: "2px solid #f5f5f5",
-          paddingBottom: "1rem",
-        }}
-      >
-        <h1
-          style={{
-            color: "#CCFF00",
-            fontFamily: "Space Mono, monospace",
-            fontSize: "1.5rem",
-            margin: 0,
-          }}
-        >
-          ROAST RESULTS
-        </h1>
-        <p
-          style={{
-            color: "#888",
-            fontSize: "0.75rem",
-            fontFamily: "Space Mono, monospace",
-            margin: "0.5rem 0 0",
-          }}
-        >
-          ID: {id}
-        </p>
-      </div>
-
-      <section style={{ marginBottom: "2rem" }}>
-        <h2
-          style={{
-            fontFamily: "Space Mono, monospace",
-            textTransform: "uppercase",
-            fontSize: "1rem",
-            color: "#CCFF00",
-            marginBottom: "1rem",
-          }}
-        >
-          YOUR SCORES
-        </h2>
+        <style>{"@keyframes blink {0%,49%{opacity:1}50%,100%{opacity:0}}"}</style>
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
+            marginBottom: "2rem",
+            borderBottom: "2px solid #f5f5f5",
+            paddingBottom: "1rem",
+          }}
+        >
+          <h1
+            style={{
+              color: "#CCFF00",
+              fontSize: "1.5rem",
+              margin: 0,
+              textTransform: "uppercase",
+              letterSpacing: "2px",
+            }}
+          >
+            ROAST RESULTS
+          </h1>
+          <p
+            style={{
+              color: "#888",
+              fontSize: "0.75rem",
+              margin: "0.5rem 0 0",
+              textTransform: "uppercase",
+            }}
+          >
+            ID: {id}
+          </p>
+        </div>
+
+        <section style={{ marginBottom: "2rem" }}>
+          <h2
+            style={{
+              textTransform: "uppercase",
+              fontSize: "1rem",
+              color: "#CCFF00",
+              marginBottom: "1rem",
+              letterSpacing: "2px",
+            }}
+          >
+            YOUR SCORES
+          </h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "1rem",
+            }}
+          >
+            {scoreEntries.map(({ key, label }) => {
+              const s = scores[key];
+              return (
+                <div
+                  key={key}
+                  style={{
+                    border: "2px solid #f5f5f5",
+                    padding: "1rem",
+                    backgroundColor: "#0a0a0a",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "0.7rem",
+                      textTransform: "uppercase",
+                      color: "#888",
+                      margin: "0 0 0.5rem",
+                      letterSpacing: "1px",
+                    }}
+                  >
+                    {label}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: "2rem",
+                      fontWeight: "bold",
+                      color: "#CCFF00",
+                      margin: "0 0 0.25rem",
+                    }}
+                  >
+                    {s.value}/100
+                  </p>
+                  <p
+                    style={{
+                      fontWeight: "bold",
+                      margin: "0 0 0.5rem",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    {s.label}
+                  </p>
+                  <p
+                    style={{
+                      color: "#888",
+                      fontSize: "0.8rem",
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {s.insight}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section style={{ marginBottom: "2rem" }}>
+          <h2
+            style={{
+              textTransform: "uppercase",
+              fontSize: "1rem",
+              color: "#CCFF00",
+              marginBottom: "1rem",
+              letterSpacing: "2px",
+            }}
+          >
+            THE ROAST 🔥
+          </h2>
+          <div style={{ border: "2px solid #f5f5f5", padding: "1.5rem" }}>
+            <p style={{ lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
+              {roast}
+              <span style={{ animation: "blink 1s step-end infinite" }}>▊</span>
+            </p>
+          </div>
+        </section>
+
+        <section style={{ marginBottom: "2rem" }}>
+          <h2
+            style={{
+              textTransform: "uppercase",
+              fontSize: "1rem",
+              color: "#CCFF00",
+              marginBottom: "1rem",
+              letterSpacing: "2px",
+            }}
+          >
+            YOUR REWRITE ✨
+          </h2>
+          <div style={{ border: "2px solid #f5f5f5", padding: "1.5rem" }}>
+            <p style={{ lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
+              {rewrite}
+            </p>
+            <CopyButton text={rewrite} />
+          </div>
+        </section>
+
+        <section
+          style={{
+            display: "flex",
             gap: "1rem",
+            flexWrap: "wrap",
+            marginBottom: "3rem",
           }}
         >
-          {scoreEntries.map(({ key, label }) => {
-            const s = scores[key];
-            return (
-              <div
-                key={key}
-                style={{
-                  border: "2px solid #f5f5f5",
-                  padding: "1rem",
-                  backgroundColor: "#0a0a0a",
-                }}
-              >
-                <p
-                  style={{
-                    fontFamily: "Space Mono, monospace",
-                    fontSize: "0.7rem",
-                    textTransform: "uppercase",
-                    color: "#888",
-                    margin: "0 0 0.5rem",
-                  }}
-                >
-                  {label}
-                </p>
-                <p
-                  style={{
-                    fontSize: "2rem",
-                    fontWeight: "bold",
-                    color: "#CCFF00",
-                    margin: "0 0 0.25rem",
-                  }}
-                >
-                  {s.value}/100
-                </p>
-                <p
-                  style={{
-                    fontWeight: "bold",
-                    margin: "0 0 0.5rem",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  {s.label}
-                </p>
-                <p
-                  style={{
-                    color: "#888",
-                    fontSize: "0.8rem",
-                    margin: 0,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {s.insight}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section style={{ marginBottom: "2rem" }}>
-        <h2
-          style={{
-            fontFamily: "Space Mono, monospace",
-            textTransform: "uppercase",
-            fontSize: "1rem",
-            color: "#CCFF00",
-            marginBottom: "1rem",
-          }}
-        >
-          THE ROAST 🔥
-        </h2>
-        <div style={{ border: "2px solid #f5f5f5", padding: "1.5rem" }}>
-          <p style={{ lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
-            {roast}
-          </p>
-        </div>
-      </section>
-
-      <section style={{ marginBottom: "2rem" }}>
-        <h2
-          style={{
-            fontFamily: "Space Mono, monospace",
-            textTransform: "uppercase",
-            fontSize: "1rem",
-            color: "#CCFF00",
-            marginBottom: "1rem",
-          }}
-        >
-          YOUR REWRITE ✨
-        </h2>
-        <div style={{ border: "2px solid #f5f5f5", padding: "1.5rem" }}>
-          <p style={{ lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
-            {rewrite}
-          </p>
-          <CopyButton text={rewrite} />
-        </div>
-      </section>
-
-      <section
-        style={{
-          display: "flex",
-          gap: "1rem",
-          flexWrap: "wrap",
-          marginBottom: "3rem",
-        }}
-      >
-        <ShareButton worstScore={worstScore} roast={roast} id={id} />
-        <button
-          onClick={() => {
-            localStorage.removeItem("lr_headline");
-            localStorage.removeItem("lr_about");
-            localStorage.removeItem("lr_experience");
-            router.push("/");
-          }}
-          style={{
-            padding: "0.75rem 1.5rem",
-            backgroundColor: "transparent",
-            color: "#f5f5f5",
-            border: "2px solid #f5f5f5",
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            cursor: "pointer",
-          }}
-        >
-          Roast Another Profile 👇
-        </button>
-      </section>
+          <ShareButton worstScore={worstScore} roast={roast} id={id} />
+          <button
+            onClick={() => {
+              localStorage.removeItem("lr_headline");
+              localStorage.removeItem("lr_about");
+              localStorage.removeItem("lr_experience");
+              router.push("/");
+            }}
+            style={{
+              padding: "0.75rem 1.5rem",
+              backgroundColor: "transparent",
+              color: "#f5f5f5",
+              border: "2px solid #f5f5f5",
+              fontWeight: "bold",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            Roast Another Profile 👇
+          </button>
+        </section>
       </main>
     </>
   );

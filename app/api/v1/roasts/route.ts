@@ -1,6 +1,49 @@
-import OpenAI from 'openai'
 import { roastStore } from '@/lib/store'
 import { supabaseServer } from '@/lib/supabase'
+
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? ''
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
+const OPENROUTER_MODEL = 'openai/gpt-4o-mini'
+
+function getHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+    'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+    'X-Title': 'LinkedRoast',
+  }
+}
+
+async function callOpenRouter(messages: any[], jsonMode = false) {
+  try {
+    const body: any = {
+      model: OPENROUTER_MODEL,
+      messages,
+    }
+
+    if (jsonMode) {
+      body.response_format = { type: 'json_object' }
+    }
+
+    const res = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(body),
+    })
+
+    if (!res.ok) {
+      console.error('[API] OpenRouter error:', res.status)
+      return null
+    }
+
+    const json = await res.json()
+    return json?.choices?.[0]?.message?.content ?? null
+
+  } catch (err) {
+    console.error('[API] OpenRouter failed:', err)
+    return null
+  }
+}
 
 const FALLBACK_SCORES = {
   recruiterAppeal: {
@@ -94,7 +137,7 @@ export async function POST(request: Request) {
     createdAt: Date.now()
   })
 
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.OPENROUTER_API_KEY
   console.log('[API] OpenAI key present:', !!apiKey)
   console.log('[API] Key prefix:', apiKey?.slice(0, 7) ?? 'MISSING')
 
@@ -115,23 +158,16 @@ export async function POST(request: Request) {
     )
   }
 
-  const openai = new OpenAI({ apiKey })
-
   let scores = FALLBACK_SCORES
-  try {
-    console.log('[API] Calling OpenAI for scores...')
-    const scoreRes = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      stream: false,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a LinkedIn profile analyzer. Return ONLY valid JSON, no markdown, no explanation.'
-        },
-        {
-          role: 'user',
-          content: `Analyze this LinkedIn profile. Return ONLY this exact JSON structure with no other text:
+  console.log('[API] Calling OpenAI for scores...')
+  const rawScores = await callOpenRouter([
+    {
+      role: 'system',
+      content: 'You are a LinkedIn profile analyzer. Return ONLY valid JSON, no markdown, no explanation.'
+    },
+    {
+      role: 'user',
+      content: `Analyze this LinkedIn profile. Return ONLY this exact JSON structure with no other text:
 {
   "recruiterAppeal": { "value": <number 0-100>, "label": "<short label>", "insight": "<one sentence>" },
   "keywordDensity": { "value": <number 0-100>, "label": "<short label>", "insight": "<one sentence>" },
@@ -148,94 +184,53 @@ cringeFactor: 0-30="Humble Legend" 31-60="Mild Cringe" 61-80="Cringe Alert" 81-1
 Headline: ${headline}
 About: ${about}
 Experience: ${experience || 'Not provided'}`
-        }
-      ]
-    })
-    const raw = scoreRes.choices[0].message.content ?? '{}'
-    console.log('[API] Raw scores response:', raw.slice(0, 200))
-    scores = JSON.parse(raw)
-    console.log('[API] Scores parsed successfully')
-  } catch (scoreError: unknown) {
-    const msg = scoreError instanceof Error
-      ? scoreError.message
-      : String(scoreError)
-    if (msg.includes('insufficient_quota') || msg.includes('429')) {
-      console.warn('[API] OpenAI quota exceeded — using fallback scores')
-    } else {
-      console.error('[API] Score generation failed:', msg)
     }
+  ], true)
+
+  if (rawScores) {
+    try { scores = JSON.parse(rawScores) }
+    catch { scores = FALLBACK_SCORES }
+  } else {
     scores = FALLBACK_SCORES
   }
 
   let roast = FALLBACK_ROAST
-  try {
-    console.log('[API] Calling OpenAI for roast...')
-    const roastRes = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      stream: false,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a savage but fair LinkedIn profile roaster. Be funny and specific about the WRITING, never personal. Write 3 short punchy paragraphs.'
-        },
-        {
-          role: 'user',
-          content: `Roast this LinkedIn profile. Start with the most damning observation. Reference specific phrases they used.
+  console.log('[API] Calling OpenAI for roast...')
+  const rawRoast = await callOpenRouter([
+    {
+      role: 'system',
+      content: 'You are a savage but fair LinkedIn profile roaster. Be funny and specific about the WRITING, never personal. Write 3 short punchy paragraphs.'
+    },
+    {
+      role: 'user',
+      content: `Roast this LinkedIn profile. Start with the most damning observation. Reference specific phrases they used.
 
 Headline: ${headline}
 About: ${about}
 Experience: ${experience || 'Not provided'}`
-        }
-      ]
-    })
-    roast = roastRes.choices[0].message.content ?? FALLBACK_ROAST
-    console.log('[API] Roast generated, length:', roast.length)
-  } catch (roastError: unknown) {
-    const msg = roastError instanceof Error
-      ? roastError.message
-      : String(roastError)
-    if (msg.includes('insufficient_quota') || msg.includes('429')) {
-      console.warn('[API] OpenAI quota exceeded — using fallback roast')
-    } else {
-      console.error('[API] Roast generation failed:', msg)
     }
-    roast = FALLBACK_ROAST
-  }
+  ])
+
+  roast = rawRoast ?? FALLBACK_ROAST
 
   let rewrite = FALLBACK_REWRITE
-  try {
-    console.log('[API] Calling OpenAI for rewrite...')
-    const rewriteRes = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      stream: false,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert LinkedIn profile writer. No buzzwords. Specific achievements. Clear value proposition.'
-        },
-        {
-          role: 'user',
-          content: `Rewrite the About section. Remove buzzwords, add specificity. 3 short paragraphs.
+  console.log('[API] Calling OpenAI for rewrite...')
+  const rawRewrite = await callOpenRouter([
+    {
+      role: 'system',
+      content: 'You are an expert LinkedIn profile writer. No buzzwords. Specific achievements. Clear value proposition.'
+    },
+    {
+      role: 'user',
+      content: `Rewrite the About section. Remove buzzwords, add specificity. 3 short paragraphs.
 
 Headline: ${headline}
 About: ${about}
 Experience: ${experience || 'Not provided'}`
-        }
-      ]
-    })
-    rewrite = rewriteRes.choices[0].message.content ?? FALLBACK_REWRITE
-    console.log('[API] Rewrite generated, length:', rewrite.length)
-  } catch (rewriteError: unknown) {
-    const msg = rewriteError instanceof Error
-      ? rewriteError.message
-      : String(rewriteError)
-    if (msg.includes('insufficient_quota') || msg.includes('429')) {
-      console.warn('[API] OpenAI quota exceeded — using fallback rewrite')
-    } else {
-      console.error('[API] Rewrite generation failed:', msg)
     }
-    rewrite = FALLBACK_REWRITE
-  }
+  ])
+
+  rewrite = rawRewrite ?? FALLBACK_REWRITE
 
   roastStore.set(roastId, {
     id: roastId,

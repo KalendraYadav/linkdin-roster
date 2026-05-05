@@ -269,8 +269,8 @@ export default function HomePage() {
           <div
             style={{
               width: `${progress}%`,
-              height: '100%',
               backgroundColor: '#CCFF00',
+              height: '100%',
               transition: 'width 0.3s ease',
             }}
           />
