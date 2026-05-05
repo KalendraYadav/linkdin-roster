@@ -71,6 +71,47 @@ function ShareButton({
   );
 }
 
+function AcquisitionBanner({ onClick }: { onClick: () => void }) {
+  return (
+    <div
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 100,
+        backgroundColor: "#CCFF00",
+        color: "#000",
+        padding: "0.75rem 2rem",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        fontFamily: "Space Mono, monospace",
+        fontWeight: "bold",
+        fontSize: "0.875rem",
+        borderBottom: "2px solid #000",
+      }}
+    >
+      <span>💀 Think YOUR LinkedIn is better than this?</span>
+      <button
+        onClick={onClick}
+        style={{
+          backgroundColor: "#000",
+          color: "#CCFF00",
+          border: "none",
+          padding: "0.5rem 1.25rem",
+          fontWeight: "bold",
+          textTransform: "uppercase",
+          cursor: "pointer",
+          fontFamily: "Space Mono, monospace",
+          fontSize: "0.75rem",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Roast My Profile 🔥
+      </button>
+    </div>
+  );
+}
+
 export default function RoastPage() {
   const params = useParams();
   const id = params.id as string;
@@ -239,17 +280,26 @@ export default function RoastPage() {
   ];
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#0a0a0a",
-        color: "#f5f5f5",
-        fontFamily: "Space Grotesk, sans-serif",
-        padding: "2rem",
-        maxWidth: "800px",
-        margin: "0 auto",
-      }}
-    >
+    <>
+      <AcquisitionBanner
+        onClick={() => {
+          localStorage.removeItem("lr_headline");
+          localStorage.removeItem("lr_about");
+          localStorage.removeItem("lr_experience");
+          router.push("/");
+        }}
+      />
+      <main
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#0a0a0a",
+          color: "#f5f5f5",
+          fontFamily: "Space Grotesk, sans-serif",
+          padding: "2rem",
+          maxWidth: "800px",
+          margin: "0 auto",
+        }}
+      >
       <div
         style={{
           marginBottom: "2rem",
@@ -423,6 +473,7 @@ export default function RoastPage() {
           Roast Another Profile 👇
         </button>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
