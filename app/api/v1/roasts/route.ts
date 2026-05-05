@@ -1,6 +1,9 @@
-export const dynamic = 'force-dynamic'
-import { roastStore } from '@/lib/store'
+import { storeSet, storeGet } from '@/lib/store'
+import type { RoastSession } from '@/lib/store'
 import { supabaseServer } from '@/lib/supabase'
+
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY ?? ''
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
@@ -129,14 +132,14 @@ export async function POST(request: Request) {
   const roastId = crypto.randomUUID()
   console.log('[API] Generated roast ID:', roastId)
 
-  roastStore.set(roastId, {
+  storeSet(roastId, {
     id: roastId,
     headline,
     about,
     experience,
     status: 'processing',
     createdAt: Date.now()
-  })
+  } as RoastSession)
 
   const apiKey = process.env.OPENROUTER_API_KEY
   console.log('[API] OpenAI key present:', !!apiKey)
@@ -144,7 +147,7 @@ export async function POST(request: Request) {
 
   if (!apiKey || apiKey.trim() === '') {
     console.warn('[API] No OpenAI key — using fallback data')
-    roastStore.set(roastId, {
+    storeSet(roastId, {
       id: roastId,
       headline, about, experience,
       status: 'completed',
@@ -152,7 +155,7 @@ export async function POST(request: Request) {
       roast: FALLBACK_ROAST,
       rewrite: FALLBACK_REWRITE,
       createdAt: Date.now()
-    })
+    } as RoastSession)
     return Response.json(
       { data: { roast_id: roastId, status: 'processing' }},
       { status: 202 }
@@ -233,7 +236,7 @@ Experience: ${experience || 'Not provided'}`
 
   rewrite = rawRewrite ?? FALLBACK_REWRITE
 
-  roastStore.set(roastId, {
+  storeSet(roastId, {
     id: roastId,
     headline, about, experience,
     status: 'completed',
@@ -241,11 +244,11 @@ Experience: ${experience || 'Not provided'}`
     roast,
     rewrite,
     createdAt: Date.now()
-  })
+  } as RoastSession)
   console.log('[API] Stored completed result for:', roastId)
 
-  // Save to Supabase asynchronously (non-blocking)
-  supabaseServer
+  // Save to Supabase before returning response
+  const { error: insertError } = await supabaseServer
     .from('roasts')
     .insert({
       id: roastId,
@@ -256,14 +259,12 @@ Experience: ${experience || 'Not provided'}`
       roast: roast,
       rewrite: rewrite,
     })
-    .then(({ error }) => {
-      if (error) {
-        console.error('[Supabase] Insert failed:', error.message)
-      } else {
-        console.log('[Supabase] Saved roast:', roastId)
-      }
-    })
-  // Note: no await - this runs after the response is returned
+
+  if (insertError) {
+    console.error('[Supabase] Insert failed:', insertError.message)
+  } else {
+    console.log('[Supabase] Saved roast:', roastId)
+  }
 
   return Response.json(
     { data: { roast_id: roastId, status: 'processing' }},

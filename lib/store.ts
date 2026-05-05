@@ -1,7 +1,4 @@
-// Persist roastStore across Next.js hot reloads in development
-// by attaching it to the Node.js global object.
-
-type RoastSession = {
+export type RoastSession = {
   id: string
   headline: string
   about: string
@@ -13,13 +10,18 @@ type RoastSession = {
   createdAt: number
 }
 
-declare global {
-  // eslint-disable-next-line no-var
-  var roastStore: Map<string, RoastSession> | undefined
+// In-memory store for local dev only.
+// On Vercel, Supabase is the source of truth.
+const localStore = new Map<string, RoastSession>()
+
+export function getRoastStore(): Map<string, RoastSession> {
+  return localStore
 }
 
-if (!global.roastStore) {
-  global.roastStore = new Map<string, RoastSession>()
+export function storeSet(id: string, session: RoastSession): void {
+  localStore.set(id, session)
 }
 
-export const roastStore = global.roastStore
+export function storeGet(id: string): RoastSession | undefined {
+  return localStore.get(id)
+}

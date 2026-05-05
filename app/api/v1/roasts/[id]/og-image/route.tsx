@@ -1,7 +1,6 @@
 import { ImageResponse } from '@vercel/og'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'edge'
 
 // -- Worst score logic --
 function getWorstScore(scores: Record<string, { value: number; label: string }>) {
