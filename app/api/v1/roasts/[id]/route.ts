@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { roastStore } from '@/lib/store'
 import { supabaseServer } from '@/lib/supabase'
 
