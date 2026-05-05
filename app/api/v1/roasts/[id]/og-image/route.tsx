@@ -148,7 +148,7 @@ export async function GET(
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{
               fontSize: '20px',
               color: '#888',
@@ -174,9 +174,9 @@ export async function GET(
               padding: '8px 20px',
               textTransform: 'uppercase',
               letterSpacing: '2px',
-              width: 'fit-content',
+              alignSelf: 'flex-start',
             }}>
-              {worst.label}
+              {worst?.label ?? 'N/A'}
             </div>
           </div>
 
