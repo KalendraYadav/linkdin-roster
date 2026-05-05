@@ -1,6 +1,7 @@
-export const dynamic = 'force-dynamic'
 import { ImageResponse } from '@vercel/og'
-import { supabaseServer } from '@/lib/supabase'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'edge'
 
 // -- Worst score logic --
 function getWorstScore(scores: Record<string, { value: number; label: string }>) {
@@ -90,6 +91,8 @@ export async function GET(
     if (!id) {
       return fallbackImage()
     }
+
+    const { supabaseServer } = await import('@/lib/supabase')
 
     const { data, error } = await supabaseServer
       .from('roasts')
