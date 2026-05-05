@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { ImageResponse } from '@vercel/og'
 import { supabaseServer } from '@/lib/supabase'
 
